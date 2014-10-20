@@ -1,0 +1,24 @@
+# An example for a web project using
+# Poul to process Less, JS and Jade
+# files.
+
+templates (copy-includes/css, js):
+src/*.jade -> dist/$1.html {
+    echo "Running ${POUL_STEP}..."
+    jade $POUL_SOURCE > dist/$1.html
+}
+
+copy-includes:
+src/includes/* -> ./ {
+    cp $POUL_SOURCe $POUL_DEST
+}
+
+css:
+src/*.less, src/includes/*.less -> dist/style.css {
+    less src/main.less > dist/style.css
+}
+
+js:
+src/*.js, package.json -> dist/script.js {
+    browserify src/main.js > dist/script.js
+}
