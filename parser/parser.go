@@ -72,9 +72,9 @@ func Parse(code string) (*Program, error) {
 			hooks := result[2]
 
 			if hooks != "" {
-			// Hooks include brackets so we remove
-			// the first and last char
-				preHooks, postHooks := parseHooks(hooks[1:len(hooks) - 1])
+				// Hooks include brackets so we remove
+				// the first and last char
+				preHooks, postHooks := parseHooks(hooks[1 : len(hooks)-1])
 
 				currentStep.Prehooks = preHooks
 				currentStep.Posthooks = postHooks
@@ -92,7 +92,7 @@ func Parse(code string) (*Program, error) {
 				return nil, fmt.Errorf("Expected source declaration at line %d", lineNumber+1)
 			}
 
-			sources, dests := parseSources(line[0:len(line)-1])
+			sources, dests := parseSources(line[0 : len(line)-1])
 
 			currentStep.Sources = sources
 			currentStep.Destinations = dests
