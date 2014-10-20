@@ -8,8 +8,13 @@ import (
 )
 
 const (
-	Newline       = "\n"
-	Comment uint8 = '#'
+	Newline            = "\n"
+	Comment      uint8 = '#'
+	Arrow              = "->"
+	Comma              = ","
+	Slash              = "/"
+	BracketOpen  uint8 = '{'
+	BracketClose       = "}"
 )
 
 const (
@@ -88,7 +93,7 @@ func Parse(code string) (*Program, error) {
 
 		// We expect a source declaration
 		if part == PartName {
-			if !strings.Contains(line, "->") || line[len(line)-1] != uint8('{') {
+			if !strings.Contains(line, Arrow) || line[len(line)-1] != BracketOpen {
 				return nil, fmt.Errorf("Expected source declaration at line %d", lineNumber+1)
 			}
 
@@ -107,7 +112,7 @@ func Parse(code string) (*Program, error) {
 		// We expect a source end or code
 		if part == PartSource {
 			// Code ends
-			if line == "}" {
+			if line == BracketClose {
 				currentStep.Code = buffer
 				part = PartNone
 
@@ -130,11 +135,11 @@ func Parse(code string) (*Program, error) {
 }
 
 func parseHooks(hooks string) ([]string, []string) {
-	return split(hooks, "/", ",")
+	return split(hooks, Slash, Comma)
 }
 
 func parseSources(line string) ([]string, []string) {
-	return split(line, "->", ",")
+	return split(line, Arrow, Comma)
 }
 
 func split(line, firstSep, secondSep string) ([]string, []string) {
