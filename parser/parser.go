@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	prog "github.com/Acconut/poul/program"
 	"io"
 	"regexp"
 	"strings"
@@ -28,26 +29,15 @@ var (
 	ReName = regexp.MustCompile(`^([A-Za-z0-9_\-]+)\s*(\([^\)]+\))?:$`)
 )
 
-type Program []Step
-
-type Step struct {
-	Name         string
-	Prehooks     []string
-	Posthooks    []string
-	Sources      []string
-	Destinations []string
-	Code         string
-}
-
-func Parse(code string) (*Program, error) {
+func Parse(code string) (*prog.Program, error) {
 
 	// Split code into lines
 	lines := strings.Split(code, Newline)
 
-	program := make(Program, 0)
+	program := make(prog.Program, 0)
 
 	part := PartNone
-	currentStep := Step{}
+	currentStep := prog.Step{}
 	buffer := ""
 
 	for lineNumber, line := range lines {
@@ -117,7 +107,7 @@ func Parse(code string) (*Program, error) {
 				part = PartNone
 
 				program = append(program, currentStep)
-				currentStep = Step{}
+				currentStep = prog.Step{}
 				continue
 			}
 
