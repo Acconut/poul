@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"io"
 	"regexp"
 	"strings"
 )
@@ -119,6 +120,10 @@ func Parse(code string) (*Program, error) {
 			continue
 		}
 
+	}
+
+	if part != PartNone {
+		return nil, io.EOF
 	}
 
 	return &program, nil
