@@ -28,7 +28,7 @@ func toRegexp(pattern string) (*regexp.Regexp, map[int]int, error) {
 
 	pattern = rePattern.ReplaceAllStringFunc(pattern, func(match string) string {
 		num, _ := strconv.Atoi(match[1:])
-		sourcemap[num] = count
+		sourcemap[count] = num
 
 		count++
 		return `([A-Za-z0-9\-_\.]+)`
@@ -58,9 +58,20 @@ func Match(pattern string) ([]Entry, error) {
 	for _, file := range files {
 		matches := re.FindAllStringSubmatch(file, -1)[0][1:]
 
+		skip := false
 		args := make(map[int]string)
 		for a, b := range sourcemap {
-			args[a] = matches[b]
+			value, ok := args[b]
+
+			if ok && value != matches[a] {
+				skip = true
+				break
+			}
+			args[b] = matches[a]
+		}
+
+		if skip {
+			continue
 		}
 
 		entries = append(entries, Entry{

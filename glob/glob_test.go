@@ -11,4 +11,6 @@ func TestFoo(t *testing.T) {
 	fmt.Println(Match("../*/$1_test.go"))
 
 	fmt.Println(Match("../$2/$1.go"))
+
+	fmt.Println(Match("../$1/$1.go"))
 }
