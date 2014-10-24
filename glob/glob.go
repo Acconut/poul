@@ -1,6 +1,7 @@
 package glob
 
 import (
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -43,6 +44,8 @@ func toRegexp(pattern string) (*regexp.Regexp, map[int]int, error) {
 }
 
 func Match(pattern string) ([]Entry, error) {
+	pattern = path.Clean(pattern)
+
 	entries := make([]Entry, 0)
 
 	re, sourcemap, err := toRegexp(pattern)
@@ -56,6 +59,11 @@ func Match(pattern string) ([]Entry, error) {
 	}
 
 	for _, file := range files {
+		file = path.Clean(file)
+
+		if !re.Match([]byte(file)) {
+			continue
+		}
 		matches := re.FindAllStringSubmatch(file, -1)[0][1:]
 
 		skip := false
