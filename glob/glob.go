@@ -14,10 +14,10 @@ type Entry struct {
 }
 
 type Pattern struct {
-	re *regexp.Regexp
+	re        *regexp.Regexp
 	sourcemap map[int]int
-	glob string
-	Pattern string
+	glob      string
+	Pattern   string
 }
 
 var rePattern = regexp.MustCompile(`\$(\d+)`)
@@ -39,10 +39,10 @@ func NewPattern(pattern string) (*Pattern, error) {
 	}
 
 	return &Pattern{
-		re: re,
+		re:        re,
 		sourcemap: sourcemap,
-		glob: glob,
-		Pattern: pattern,
+		glob:      glob,
+		Pattern:   pattern,
 	}, nil
 }
 
@@ -104,7 +104,6 @@ func (pattern Pattern) Match(file string) (Entry, bool) {
 		}
 		args[b] = matches[a]
 	}
-
 
 	entry.Name = file
 	entry.Args = args

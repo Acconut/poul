@@ -12,9 +12,9 @@ type globTest struct {
 
 type matchTest struct {
 	pattern string
-	file string
+	file    string
 	matches bool
-	entry Entry
+	entry   Entry
 }
 
 var globTests = []globTest{
