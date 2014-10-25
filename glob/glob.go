@@ -13,14 +13,37 @@ type Entry struct {
 	Args map[int]string
 }
 
-var rePattern = regexp.MustCompile(`\$(\d+)`)
-
-func toGlob(pattern string) string {
-	return rePattern.ReplaceAllStringFunc(pattern, toGlobReplacer)
+type Pattern struct {
+	re *regexp.Regexp
+	sourcemap map[int]int
+	glob string
+	Pattern string
 }
 
-func toGlobReplacer(a string) string {
-	return "*"
+var rePattern = regexp.MustCompile(`\$(\d+)`)
+
+func NewPattern(pattern string) (*Pattern, error) {
+	// Remove ./ from the beginning
+	pattern = path.Clean(pattern)
+
+	// Transform the pattern into
+	// filepath.Glob's one
+	glob := rePattern.ReplaceAllStringFunc(pattern, func(a string) string {
+		return "*"
+	})
+
+	// Compile it into a regexp
+	re, sourcemap, err := toRegexp(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Pattern{
+		re: re,
+		sourcemap: sourcemap,
+		glob: glob,
+		Pattern: pattern,
+	}, nil
 }
 
 func toRegexp(pattern string) (*regexp.Regexp, map[int]int, error) {
@@ -43,17 +66,10 @@ func toRegexp(pattern string) (*regexp.Regexp, map[int]int, error) {
 	return re, sourcemap, err
 }
 
-func Match(pattern string) ([]Entry, error) {
-	pattern = path.Clean(pattern)
-
+func (pattern Pattern) Glob() ([]Entry, error) {
 	entries := make([]Entry, 0)
 
-	re, sourcemap, err := toRegexp(pattern)
-	if err != nil {
-		return entries, err
-	}
-
-	files, err := filepath.Glob(toGlob(pattern))
+	files, err := filepath.Glob(pattern.glob)
 	if err != nil {
 		return entries, err
 	}
@@ -61,32 +77,41 @@ func Match(pattern string) ([]Entry, error) {
 	for _, file := range files {
 		file = path.Clean(file)
 
-		if !re.Match([]byte(file)) {
-			continue
+		entry, matches := pattern.Match(file)
+		if matches {
+			entries = append(entries, entry)
 		}
-		matches := re.FindAllStringSubmatch(file, -1)[0][1:]
-
-		skip := false
-		args := make(map[int]string)
-		for a, b := range sourcemap {
-			value, ok := args[b]
-
-			if ok && value != matches[a] {
-				skip = true
-				break
-			}
-			args[b] = matches[a]
-		}
-
-		if skip {
-			continue
-		}
-
-		entries = append(entries, Entry{
-			Name: file,
-			Args: args,
-		})
 	}
 
 	return entries, nil
+}
+
+func (pattern Pattern) Match(file string) (Entry, bool) {
+	entry := Entry{}
+	file = path.Clean(file)
+
+	if !pattern.re.Match([]byte(file)) {
+		return entry, false
+	}
+	matches := pattern.re.FindAllStringSubmatch(file, -1)[0][1:]
+
+	args := make(map[int]string)
+	for a, b := range pattern.sourcemap {
+		value, ok := args[b]
+
+		if ok && value != matches[a] {
+			return entry, false
+		}
+		args[b] = matches[a]
+	}
+
+
+	entry.Name = file
+	entry.Args = args
+
+	return entry, true
+}
+
+func (pattern Pattern) String() string {
+	return pattern.Pattern
 }
