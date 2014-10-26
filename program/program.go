@@ -78,6 +78,24 @@ func (prog Program) Build(dest string) (int, error) {
 	return -1, ErrNoMatch
 }
 
+func (prog Program) Compile(source string) (int, error) {
+	for _, step := range prog.Steps {
+		args, matches, err := step.Compiles(source)
+		if err != nil {
+			return -1, err
+		}
+
+		if matches {
+			dests := glob.ReplaceSlice(step.Destinations, args)
+			return prog.Run(step, []string{
+				source,
+			}, dests, args)
+		}
+	}
+
+	return -1, ErrNoMatch
+}
+
 func (prog Program) Run(step Step, sources, dests []string, args map[int]string) (int, error) {
 	cmd := exec.Command("/bin/sh", "-c", step.Code)
 

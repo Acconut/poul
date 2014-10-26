@@ -41,6 +41,14 @@ func TestBuild(t *testing.T) {
 	fmt.Println(code)
 }
 
+func TestCompile(t *testing.T) {
+	code, err := prog.Compile("src/lol")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(code)
+}
+
 func TestRunTemplate(t *testing.T) {
 	code, err := prog.RunTemplate("echo")
 	if err != nil {
