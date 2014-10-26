@@ -96,6 +96,16 @@ func (prog Program) Compile(source string) (int, error) {
 	return -1, ErrNoMatch
 }
 
+func (prog Program) CompileMulti(sources []string) (int, error) {
+	for _, source := range sources {
+		code, err := prog.Compile(source)
+		if code != 0 {
+			return code, err
+		}
+	}
+	return 0, nil
+}
+
 func (prog Program) Run(step Step, sources, dests []string, args map[int]string) (int, error) {
 	cmd := exec.Command("/bin/sh", "-c", step.Code)
 

@@ -27,8 +27,7 @@ var prog = Program{
 echo "Compiling ${POUL_SRC}."
 echo "Building ${POUL_DEST}."
 echo "Arg #1: ${POUL_ARG_1}."
-printenv
-exit 4`,
+printenv`,
 		},
 	},
 }
@@ -43,6 +42,17 @@ func TestBuild(t *testing.T) {
 
 func TestCompile(t *testing.T) {
 	code, err := prog.Compile("src/lol")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(code)
+}
+
+func TestCompileMulti(t *testing.T) {
+	code, err := prog.CompileMulti([]string{
+		"src/lol",
+		"src/foo",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
