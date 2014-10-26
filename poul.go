@@ -31,6 +31,11 @@ func main() {
 			Usage:  "build a destination",
 			Action: build,
 		},
+		{
+			Name:   "run",
+			Usage:  "run a templte",
+			Action: run,
+		},
 	}
 
 	app.Flags = []cli.Flag{
@@ -87,6 +92,19 @@ func build(c *cli.Context) {
 	}
 	prog := readPoulfile(c)
 	code, err := prog.Build(c.Args()[0])
+	if err != nil {
+		panic(err)
+	}
+	os.Exit(code)
+}
+
+func run(c *cli.Context) {
+	if len(c.Args()) < 0 {
+		fmt.Println("no template supplied.")
+		os.Exit(1)
+	}
+	prog := readPoulfile(c)
+	code, err := prog.RunTemplate(c.Args()[0])
 	if err != nil {
 		panic(err)
 	}
