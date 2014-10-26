@@ -2,13 +2,18 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/Acconut/poul/parser"
 	"github.com/Acconut/poul/program"
 	"github.com/codegangsta/cli"
 	"io/ioutil"
+	"log"
 	"os"
 )
+
+func init() {
+	// Disable timestamp
+	log.SetFlags(0)
+}
 
 func main() {
 	app := cli.NewApp()
@@ -56,7 +61,7 @@ func dump(c *cli.Context) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(string(b))
+	log.Println(string(b))
 }
 
 func readPoulfile(c *cli.Context) *program.Program {
@@ -74,12 +79,14 @@ func readPoulfile(c *cli.Context) *program.Program {
 
 func compile(c *cli.Context) {
 	if len(c.Args()) < 0 {
-		fmt.Println("no source file(s) supplied.")
-		os.Exit(1)
+		log.Fatal("no source file(s) supplied.")
 	}
 	prog := readPoulfile(c)
 	code, err := prog.CompileMulti(c.Args()[0:])
 	if err != nil {
+		if err == program.ErrNoMatch {
+			log.Fatal("no build step found.")
+		}
 		panic(err)
 	}
 	os.Exit(code)
@@ -87,8 +94,7 @@ func compile(c *cli.Context) {
 
 func build(c *cli.Context) {
 	if len(c.Args()) < 0 {
-		fmt.Println("no destination(s) supplied.")
-		os.Exit(1)
+		log.Fatal("no destination(s) supplied.")
 	}
 	prog := readPoulfile(c)
 	code, err := prog.BuildMulti(c.Args()[0:])
@@ -100,8 +106,7 @@ func build(c *cli.Context) {
 
 func run(c *cli.Context) {
 	if len(c.Args()) < 0 {
-		fmt.Println("no template supplied.")
-		os.Exit(1)
+		log.Fatal("no template supplied.")
 	}
 	prog := readPoulfile(c)
 	code, err := prog.RunTemplate(c.Args()[0])
