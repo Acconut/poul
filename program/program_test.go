@@ -1,46 +1,48 @@
 package program
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 )
 
 var prog = Program{
-	Step{
-		Name: "echo",
-		Prehooks: []string{
-			"pre",
+	Templates: map[string]Template{
+		"echo": Template{
+			Name: "echo",
+			Destinations: []string{
+				"foo/boo",
+			},
 		},
-		Code: `echo "Hello world!"
-echo "Running step ${POUL_STEP}."
+	},
+	Steps: []Step{
+		Step{
+			Sources: []string{
+				"src/$1",
+				"src/package",
+			},
+			Destinations: []string{
+				"foo/$1",
+			},
+			Code: `echo "Hello world!"
+echo "Compiling ${POUL_SRC}."
+echo "Building ${POUL_DEST}."
+echo "Arg #1: ${POUL_ARG_1}."
+printenv
 exit 4`,
-	},
-	Step{
-		Name: "pre",
-		Code: `echo "I'm pre: ${POUL_STEP}"`,
+		},
 	},
 }
 
-func TestFindName(t *testing.T) {
-	step, ok := prog.FindName("echo")
-	if ok != true {
-		t.Error("ok should be true")
+func TestBuild(t *testing.T) {
+	code, err := prog.Build("foo/bar")
+	if err != nil {
+		t.Fatal(err)
 	}
-	if step.Name != "echo" {
-		t.Error("wrong name returned")
-	}
-
-	step, ok = prog.FindName("doesnotexist")
-	if ok != false {
-		t.Error("ok should be false")
-	}
-	if step.Name != "" {
-		t.Error("empty step should be returned")
-	}
+	fmt.Println(code)
 }
 
-func TestRun(t *testing.T) {
-	code, err := prog.RunName("echo")
+func TestRunTemplate(t *testing.T) {
+	code, err := prog.RunTemplate("echo")
 	if err != nil {
 		t.Fatal(err)
 	}

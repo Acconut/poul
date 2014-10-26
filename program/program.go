@@ -1,65 +1,95 @@
 package program
 
 import (
+	"errors"
 	"os"
 	"os/exec"
-	"syscall"
-	"errors"
+	"strconv"
 	"strings"
+	"syscall"
+
+	"github.com/Acconut/poul/glob"
 )
 
 var ErrStepNotFound = errors.New("program: step not found")
+var ErrTemplateNotFound = errors.New("program: template not found")
+var ErrNoMatch = errors.New("program: no matching step found")
 
-type Program []Step
+type Program struct {
+	Steps     []Step
+	Templates map[string]Template
+}
 
-type Step struct {
+type Template struct {
 	Name         string
 	Prehooks     []string
 	Posthooks    []string
-	Sources      []string
 	Destinations []string
-	Code         string
 }
 
-func (prog Program) FindName(name string) (Step, bool) {
-	for _, step := range prog {
-		if step.Name == name {
-			return step, true
-		}
-	}
-	return Step{}, false
-}
-
-func (prog Program) RunName(name string) (int, error) {
-	return prog.Run(name, nil, nil, nil)
-}
-
-func (prog Program) Run(name string, sources, dests, args []string) (int, error) {
-	step, ok := prog.FindName(name)
+func (prog Program) RunTemplate(name string) (int, error) {
+	tpl, ok := prog.Templates[name]
 	if !ok {
-		return -1, ErrStepNotFound
+		return -1, ErrTemplateNotFound
 	}
 
 	// Run prehooks
-	for _, hook := range step.Prehooks {
-		code, err := prog.RunName(hook)
+	for _, hook := range tpl.Prehooks {
+		code, err := prog.RunTemplate(hook)
 		if err != nil || code != 0 {
 			return code, err
 		}
 	}
 
+	// Run steps for destinations
+	for _, dest := range tpl.Destinations {
+		code, err := prog.Build(dest)
+		if err != nil || code != 0 {
+			return code, err
+		}
+	}
+
+	// Run posthooks
+	for _, hook := range tpl.Posthooks {
+		code, err := prog.RunTemplate(hook)
+		if err != nil || code != 0 {
+			return code, err
+		}
+	}
+
+	return 0, nil
+}
+
+func (prog Program) Build(dest string) (int, error) {
+	for _, step := range prog.Steps {
+		args, matches, err := step.Builds(dest)
+		if err != nil {
+			return -1, err
+		}
+
+		if matches {
+			sources := glob.ReplaceSlice(step.Sources, args)
+			return prog.Run(step, sources, []string{
+				dest,
+			}, args)
+		}
+	}
+
+	return -1, ErrNoMatch
+}
+
+func (prog Program) Run(step Step, sources, dests []string, args map[int]string) (int, error) {
 	cmd := exec.Command("/bin/sh", "-c", step.Code)
 
 	// Setup environment variables
-	env := make([]string, len(args) + 3)
-	env[0] = "POUL_STEP=" + step.Name
-	env[1] = "POUL_SOURCES=" + strings.Join(sources, " ")
-	env[2] = "POUL_DESTINATIONS=" + strings.Join(dests, " ")
+	env := make([]string, len(args)+2)
+	env[0] = "POUL_SRC=" + strings.Join(sources, " ")
+	env[1] = "POUL_DEST=" + strings.Join(dests, " ")
 
 	// Setup arguments
-	i := 3
+	i := 2
 	for index, value := range args {
-		env[i] = "POUL_ARG_" + string(index) + "=" + value
+		env[i] = "POUL_ARG_" + strconv.Itoa(index) + "=" + value
 		i++
 	}
 
@@ -73,14 +103,6 @@ func (prog Program) Run(name string, sources, dests, args []string) (int, error)
 	code, ok := getExitCode(err)
 	if ok {
 		return code, nil
-	}
-
-	// Run posthooks
-	for _, hook := range step.Posthooks {
-		code, err := prog.RunName(hook)
-		if err != nil || code != 0 {
-			return code, err
-		}
 	}
 
 	return -1, err
