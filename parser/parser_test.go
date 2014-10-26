@@ -9,13 +9,22 @@ import (
 
 var programTest = `
 # A comment
-step1:
+
+
+ template-empty (pre1, pre2  /post1) { 
+}
+
+
 foo/bar -> dep/out {
 command1
 command2
 }
 
- step-2 (pre1, pre2  /post1): 
+template-1 {
+dist/foo.html
+bar/lol.hi
+}
+
   foo/*/$1/lol, here.file -> ../hi/ouz, three { 
 	echo hello
 }
@@ -30,39 +39,54 @@ func TestParser(t *testing.T) {
 	}
 
 	expected := &p.Program{
-		p.Step{
-			Name:      "step1",
-			Prehooks:  nil,
-			Posthooks: nil,
-			Sources: []string{
-				"foo/bar",
+		Templates: map[string]p.Template{
+			"template-1": p.Template{
+				Name:      "template-1",
+				Prehooks:  nil,
+				Posthooks: nil,
+				Destinations: []string{
+					"dist/foo.html",
+					"bar/lol.hi",
+				},
 			},
-			Destinations: []string{
-				"dep/out",
+			"template-empty": p.Template{
+				Name: "template-empty",
+				Prehooks: []string{
+					"pre1",
+					"pre2",
+				},
+				Posthooks: []string{
+					"post1",
+				},
+				Destinations: []string{
+					"",
+				},
 			},
-			Code: `command1
+		},
+		Steps: []p.Step{
+			p.Step{
+				Sources: []string{
+					"foo/bar",
+				},
+				Destinations: []string{
+					"dep/out",
+				},
+				Code: `command1
 command2
 `,
-		},
-		p.Step{
-			Name: "step-2",
-			Prehooks: []string{
-				"pre1",
-				"pre2",
 			},
-			Posthooks: []string{
-				"post1",
-			},
-			Sources: []string{
-				"foo/*/$1/lol",
-				"here.file",
-			},
-			Destinations: []string{
-				"../hi/ouz",
-				"three",
-			},
-			Code: `echo hello
+			p.Step{
+				Sources: []string{
+					"foo/*/$1/lol",
+					"here.file",
+				},
+				Destinations: []string{
+					"../hi/ouz",
+					"three",
+				},
+				Code: `echo hello
 `,
+			},
 		},
 	}
 
@@ -74,7 +98,6 @@ command2
 
 func TestParserEOF(t *testing.T) {
 	program, err := Parse(`
-template:
 foo -> bar {
 `)
 	if err != io.EOF {

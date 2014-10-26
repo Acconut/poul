@@ -20,13 +20,12 @@ const (
 
 const (
 	PartNone = 1 << iota
-	PartName
-	PartSource
-	PartCode
+	PartTemplateStart
+	PartStepStart
 )
 
 var (
-	ReName = regexp.MustCompile(`^([A-Za-z0-9_\-]+)\s*(\([^\)]+\))?:$`)
+	ReTemplateStart = regexp.MustCompile(`^([A-Za-z0-9_\-]+)\s*(\([^\)]+\))?\s*{$`)
 )
 
 func Parse(code string) (*prog.Program, error) {
@@ -34,10 +33,14 @@ func Parse(code string) (*prog.Program, error) {
 	// Split code into lines
 	lines := strings.Split(code, Newline)
 
-	program := make(prog.Program, 0)
+	program := prog.Program{
+		Steps:     make([]prog.Step, 0),
+		Templates: make(map[string]prog.Template),
+	}
 
 	part := PartNone
 	currentStep := prog.Step{}
+	currentTemplate := prog.Template{}
 	buffer := ""
 
 	for lineNumber, line := range lines {
@@ -55,59 +58,62 @@ func Parse(code string) (*prog.Program, error) {
 			continue
 		}
 
-		// We expect a template name declaration
+		// We expect a template or step start declaration
 		if part == PartNone {
-			if !ReName.Match([]byte(line)) {
-				return nil, fmt.Errorf("Expected name declaration at line %d", lineNumber+1)
+			if ReTemplateStart.Match([]byte(line)) {
+				// We found a template start
+				result := ReTemplateStart.FindStringSubmatch(line)
+
+				templateName := result[1]
+				hooks := result[2]
+
+				if hooks != "" {
+					// Hooks include brackets so we remove
+					// the first and last char
+					preHooks, postHooks := parseHooks(hooks[1 : len(hooks)-1])
+
+					currentTemplate.Prehooks = preHooks
+					currentTemplate.Posthooks = postHooks
+				}
+
+				currentTemplate.Name = templateName
+
+				part = PartTemplateStart
+				continue
+			} else if strings.Contains(line, Arrow) && line[len(line)-1] == BracketOpen {
+				// We found a step declaration
+				sources, dests := parseSources(line[0 : len(line)-1])
+
+				currentStep.Sources = sources
+				currentStep.Destinations = dests
+
+				part = PartStepStart
+				continue
+			} else {
+				return nil, fmt.Errorf("Expected template or step declaration at line %d", lineNumber+1)
 			}
-
-			result := ReName.FindStringSubmatch(line)
-
-			templateName := result[1]
-			hooks := result[2]
-
-			if hooks != "" {
-				// Hooks include brackets so we remove
-				// the first and last char
-				preHooks, postHooks := parseHooks(hooks[1 : len(hooks)-1])
-
-				currentStep.Prehooks = preHooks
-				currentStep.Posthooks = postHooks
-			}
-
-			currentStep.Name = templateName
-
-			part = PartName
-			continue
 		}
 
-		// We expect a source declaration
-		if part == PartName {
-			if !strings.Contains(line, Arrow) || line[len(line)-1] != BracketOpen {
-				return nil, fmt.Errorf("Expected source declaration at line %d", lineNumber+1)
-			}
-
-			sources, dests := parseSources(line[0 : len(line)-1])
-
-			currentStep.Sources = sources
-			currentStep.Destinations = dests
-
-			// Clear buffer
-			buffer = ""
-
-			part = PartSource
-			continue
-		}
-
-		// We expect a source end or code
-		if part == PartSource {
+		// We expect a body end or content
+		if part == PartTemplateStart || part == PartStepStart {
 			// Code ends
 			if line == BracketClose {
-				currentStep.Code = buffer
-				part = PartNone
+				if part == PartStepStart {
+					currentStep.Code = buffer
+					part = PartNone
 
-				program = append(program, currentStep)
-				currentStep = prog.Step{}
+					program.Steps = append(program.Steps, currentStep)
+					currentStep = prog.Step{}
+				} else if part == PartTemplateStart {
+					currentTemplate.Destinations = strings.Split(strings.TrimSpace(buffer), Newline)
+					part = PartNone
+
+					program.Templates[currentTemplate.Name] = currentTemplate
+					currentTemplate = prog.Template{}
+				}
+
+				// Clear buffer
+				buffer = ""
 				continue
 			}
 
