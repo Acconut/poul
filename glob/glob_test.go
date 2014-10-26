@@ -201,3 +201,15 @@ func TestMatch(t *testing.T) {
 		}
 	}
 }
+
+func TestReplace(t *testing.T) {
+	out := Replace("foo/$2/$1-hi/lol", map[int]string{
+		1: "bar",
+		2: "baz",
+		3: "boo",
+	})
+
+	if out != "foo/baz/bar-hi/lol" {
+		t.Errorf("unexpected result: %s", out)
+	}
+}

@@ -114,3 +114,17 @@ func (pattern Pattern) Match(file string) (Entry, bool) {
 func (pattern Pattern) String() string {
 	return pattern.Pattern
 }
+
+func Replace(str string, args map[int]string) string {
+	for index, value := range args {
+		str = strings.Replace(str, "$"+strconv.Itoa(index), value, -1)
+	}
+	return str
+}
+
+func ReplaceSlice(strs []string, args map[int]string) []string {
+	for index, value := range strs {
+		strs[index] = Replace(value, args)
+	}
+	return strs
+}
