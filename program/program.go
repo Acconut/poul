@@ -78,6 +78,16 @@ func (prog Program) Build(dest string) (int, error) {
 	return -1, ErrNoMatch
 }
 
+func (prog Program) BuildMulti(dests []string) (int, error) {
+	for _, dest := range dests {
+		code, err := prog.Build(dest)
+		if code != 0 {
+			return code, err
+		}
+	}
+	return 0, nil
+}
+
 func (prog Program) Compile(source string) (int, error) {
 	for _, step := range prog.Steps {
 		args, matches, err := step.Compiles(source)

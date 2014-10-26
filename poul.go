@@ -87,11 +87,11 @@ func compile(c *cli.Context) {
 
 func build(c *cli.Context) {
 	if len(c.Args()) < 0 {
-		fmt.Println("no destination supplied.")
+		fmt.Println("no destination(s) supplied.")
 		os.Exit(1)
 	}
 	prog := readPoulfile(c)
-	code, err := prog.Build(c.Args()[0])
+	code, err := prog.BuildMulti(c.Args()[0:])
 	if err != nil {
 		panic(err)
 	}
