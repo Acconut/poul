@@ -21,6 +21,11 @@ func main() {
 			Usage:  "dump the content of Poulfile to stdout",
 			Action: dump,
 		},
+		{
+			Name:   "compile",
+			Usage:  "compile a source file",
+			Action: compile,
+		},
 	}
 
 	app.Flags = []cli.Flag{
@@ -55,4 +60,17 @@ func readPoulfile(c *cli.Context) *program.Program {
 		panic(err)
 	}
 	return prog
+}
+
+func compile(c *cli.Context) {
+	if len(c.Args()) < 0 {
+		fmt.Println("no source file supplied.")
+		os.Exit(1)
+	}
+	prog := readPoulfile(c)
+	code, err := prog.Compile(c.Args()[0])
+	if err != nil {
+		panic(err)
+	}
+	os.Exit(code)
 }
