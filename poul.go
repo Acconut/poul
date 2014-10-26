@@ -69,11 +69,11 @@ func readPoulfile(c *cli.Context) *program.Program {
 
 func compile(c *cli.Context) {
 	if len(c.Args()) < 0 {
-		fmt.Println("no source file supplied.")
+		fmt.Println("no source file(s) supplied.")
 		os.Exit(1)
 	}
 	prog := readPoulfile(c)
-	code, err := prog.Compile(c.Args()[0])
+	code, err := prog.CompileMulti(c.Args()[0:])
 	if err != nil {
 		panic(err)
 	}
