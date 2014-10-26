@@ -26,6 +26,11 @@ func main() {
 			Usage:  "compile a source file",
 			Action: compile,
 		},
+		{
+			Name:   "build",
+			Usage:  "build a destination",
+			Action: build,
+		},
 	}
 
 	app.Flags = []cli.Flag{
@@ -69,6 +74,19 @@ func compile(c *cli.Context) {
 	}
 	prog := readPoulfile(c)
 	code, err := prog.Compile(c.Args()[0])
+	if err != nil {
+		panic(err)
+	}
+	os.Exit(code)
+}
+
+func build(c *cli.Context) {
+	if len(c.Args()) < 0 {
+		fmt.Println("no destination supplied.")
+		os.Exit(1)
+	}
+	prog := readPoulfile(c)
+	code, err := prog.Build(c.Args()[0])
 	if err != nil {
 		panic(err)
 	}
