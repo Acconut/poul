@@ -1,0 +1,5 @@
+src/$1.txt -> dest/$1.html {
+	echo "<h1>" > $POUL_DEST
+	cat $POUL_SRC >> $POUL_DEST
+	echo "</h1>" >> $POUL_DEST
+}
