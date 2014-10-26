@@ -68,6 +68,9 @@ func readPoulfile(c *cli.Context) *program.Program {
 	name := c.GlobalString("file")
 	b, err := ioutil.ReadFile(name)
 	if err != nil {
+		if os.IsNotExist(err) {
+			log.Fatalf("unable to read poulfile: file '%s' does not exist", name)
+		}
 		panic(err)
 	}
 	prog, err := parser.Parse(string(b))
