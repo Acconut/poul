@@ -75,6 +75,9 @@ func readPoulfile(c *cli.Context) *program.Program {
 	}
 	prog, err := parser.Parse(string(b))
 	if err != nil {
+		if perr, ok := err.(parser.ParseError); ok {
+			log.Fatalf("unable to parse poulfile: %s", perr)
+		}
 		panic(err)
 	}
 	return prog
