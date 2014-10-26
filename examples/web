@@ -10,8 +10,8 @@ frontend {
 	dist/script.js
 }
 
-src/*.jade -> dist/$1.html {
-	jade $POUL_SOURCE > dist/$1.html
+src/$1.jade -> dist/$1.html {
+	jade $POUL_SRC > $POUL_DEST
 }
 
 src/includes/* -> ./ {
