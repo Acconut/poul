@@ -107,3 +107,16 @@ foo -> bar {
 		t.Error("expected nil as return value")
 	}
 }
+
+func TestError(t *testing.T) {
+	_, err := Parse(`
+foo
+`)
+	perr, ok := err.(ParseError)
+	if !ok {
+		t.Error("expected err to be ParseError")
+	}
+	if perr.Line != 2 {
+		t.Error("expected error at line 2 not at %d", perr.Line)
+	}
+}

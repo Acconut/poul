@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	prog "github.com/Acconut/poul/program"
 	"io"
 	"regexp"
@@ -90,7 +89,10 @@ func Parse(code string) (*prog.Program, error) {
 				part = PartStepStart
 				continue
 			} else {
-				return nil, fmt.Errorf("Expected template or step declaration at line %d", lineNumber+1)
+				return nil, ParseError{
+					lineNumber + 1,
+					"Expected template or step declaration",
+				}
 			}
 		}
 
