@@ -127,5 +127,5 @@ func ReplaceSlice(strs []string, args map[int]string) []string {
 	for index, value := range strs {
 		arr[index] = Replace(value, args)
 	}
-	return strs
+	return arr
 }

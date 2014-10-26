@@ -213,3 +213,22 @@ func TestReplace(t *testing.T) {
 		t.Errorf("unexpected result: %s", out)
 	}
 }
+
+func TestReplaceSlice(t *testing.T) {
+	out := ReplaceSlice([]string{
+		"foo/$2/$1-hi/lol",
+		"$1/$2/$3",
+	}, map[int]string{
+		1: "bar",
+		2: "baz",
+		3: "boo",
+	})
+
+	if out[0] != "foo/baz/bar-hi/lol" {
+		t.Errorf("unexpected result: %s", out)
+	}
+
+	if out[1] != "bar/baz/boo" {
+		t.Errorf("unexpected result: %s", out)
+	}
+}
