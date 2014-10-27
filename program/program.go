@@ -126,7 +126,7 @@ func (prog Program) CompileMulti(sources []string) (int, error) {
 }
 
 func (prog Program) Run(step Step, sources, dests []string, args map[int]string) (int, error) {
-	cmd := exec.Command("/bin/sh", "-c", step.Code)
+	cmd := exec.Command("/bin/sh", "-e", "-c", step.Code)
 
 	// Setup environment variables
 	env := make([]string, len(args)+2)
