@@ -26,7 +26,7 @@ echo "POUL_ARG_1: ${POUL_ARG_1}"`,
 	},
 }
 
-func ExampleBuild() {
+func ExampleProgram_Build() {
 	code, err := prog.Build("foo/bar")
 	if err != nil {
 		panic(err)
@@ -40,7 +40,7 @@ func ExampleBuild() {
 	// POUL_ARG_1: bar
 }
 
-func ExampleCompile() {
+func ExampleProgram_Compile() {
 	code, err := prog.Compile("src/lol")
 	if err != nil {
 		panic(err)
@@ -54,7 +54,7 @@ func ExampleCompile() {
 	// POUL_ARG_1: lol
 }
 
-func ExampleCompileMulti() {
+func ExampleProgram_CompileMulti() {
 	code, err := prog.CompileMulti([]string{
 		"src/lol",
 		"src/foo",
@@ -74,7 +74,7 @@ func ExampleCompileMulti() {
 	// POUL_ARG_1: foo
 }
 
-func ExampleRunTemplate() {
+func ExampleProgram_RunTemplate() {
 	code, err := prog.RunTemplate("echo")
 	if err != nil {
 		panic(err)
