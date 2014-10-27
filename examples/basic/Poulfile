@@ -3,6 +3,10 @@ all {
 	dest/bye.html
 }
 
+src/$1.txt -> /dev/null {
+	echo "Another compiler for ${POUL_SRC}"
+}
+
 src/$1.txt -> dest/$1.html {
 	echo "<h1>" > $POUL_DEST
 	cat $POUL_SRC >> $POUL_DEST

@@ -89,6 +89,7 @@ func (prog Program) BuildMulti(dests []string) (int, error) {
 }
 
 func (prog Program) Compile(source string) (int, error) {
+	hadMatch := false
 	for _, step := range prog.Steps {
 		args, matches, err := step.Compiles(source)
 		if err != nil {
@@ -96,11 +97,19 @@ func (prog Program) Compile(source string) (int, error) {
 		}
 
 		if matches {
+			hadMatch = true
 			dests := glob.ReplaceSlice(step.Destinations, args)
-			return prog.Run(step, []string{
+			code, err := prog.Run(step, []string{
 				source,
 			}, dests, args)
+			if code != 0 || err != nil {
+				return code, err
+			}
 		}
+	}
+
+	if hadMatch {
+		return 0, nil
 	}
 
 	return -1, ErrNoMatch
