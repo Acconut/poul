@@ -2,12 +2,19 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/Acconut/poul/parser"
 	"github.com/Acconut/poul/program"
 	"github.com/codegangsta/cli"
+	"gopkg.in/fsnotify.v1"
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
+)
+
+var (
+	stderr = log.New(os.Stderr, "", 0)
 )
 
 func init() {
@@ -40,6 +47,11 @@ func main() {
 			Name:   "run",
 			Usage:  "run a templte",
 			Action: run,
+		},
+		{
+			Name:   "watch",
+			Usage:  "watch a directory for changes on sources and recompile",
+			Action: watch,
 		},
 	}
 
@@ -120,4 +132,66 @@ func run(c *cli.Context) {
 		panic(err)
 	}
 	os.Exit(code)
+}
+
+func watch(c *cli.Context) {
+	prog := readPoulfile(c)
+	dir := "./"
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer watcher.Close()
+
+	done := make(chan bool)
+	go func() {
+		for {
+			select {
+			case evt := <-watcher.Events:
+				prefix := fmt.Sprintf("Event: %s... ", evt)
+				if !isChangeOp(evt.Op) {
+					stderr.Println(prefix + "ignoring.")
+					continue
+				}
+
+				stderr.Println(prefix + "recompiling.")
+				code, err := prog.Compile(evt.Name)
+				if err != nil {
+					if err == program.ErrNoMatch {
+						stderr.Printf("No build step found.")
+						continue
+					}
+					log.Fatal(err)
+				}
+				if code != 0 {
+					stderr.Printf("Step exited with code %d.\n", code)
+				}
+			case err := <-watcher.Errors:
+				log.Fatal(err)
+			}
+		}
+	}()
+
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			return nil
+		}
+		stderr.Printf("Watching directory '%s'.\n", path)
+
+		return watcher.Add(path)
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	<-done
+}
+
+func isChangeOp(op fsnotify.Op) bool {
+	return op&fsnotify.Create == fsnotify.Create ||
+		op&fsnotify.Write == fsnotify.Write ||
+		op&fsnotify.Rename == fsnotify.Rename
 }
