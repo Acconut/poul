@@ -1,10 +1,5 @@
 package program
 
-import (
-	"fmt"
-	"testing"
-)
-
 var prog = Program{
 	Templates: map[string]Template{
 		"echo": Template{
@@ -23,46 +18,72 @@ var prog = Program{
 			Destinations: []string{
 				"foo/$1",
 			},
-			Code: `echo "Hello world!"
-echo "Compiling ${POUL_SRC}."
-echo "Building ${POUL_DEST}."
-echo "Arg #1: ${POUL_ARG_1}."
-printenv`,
+			Code: `
+echo "POUL_SRC: ${POUL_SRC}"
+echo "POUL_DEST: ${POUL_DEST}"
+echo "POUL_ARG_1: ${POUL_ARG_1}"`,
 		},
 	},
 }
 
-func TestBuild(t *testing.T) {
+func ExampleBuild() {
 	code, err := prog.Build("foo/bar")
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
-	fmt.Println(code)
+	if code != 0 {
+		panic("not null")
+	}
+	// Output:
+	// POUL_SRC: src/bar src/package
+	// POUL_DEST: foo/bar
+	// POUL_ARG_1: bar
 }
 
-func TestCompile(t *testing.T) {
+func ExampleCompile() {
 	code, err := prog.Compile("src/lol")
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
-	fmt.Println(code)
+	if code != 0 {
+		panic("not null")
+	}
+	// Output:
+	// POUL_SRC: src/lol
+	// POUL_DEST: foo/lol
+	// POUL_ARG_1: lol
 }
 
-func TestCompileMulti(t *testing.T) {
+func ExampleCompileMulti() {
 	code, err := prog.CompileMulti([]string{
 		"src/lol",
 		"src/foo",
 	})
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
-	fmt.Println(code)
+	if code != 0 {
+		panic("not null")
+	}
+	// Output:
+	// POUL_SRC: src/lol
+	// POUL_DEST: foo/lol
+	// POUL_ARG_1: lol
+	// POUL_SRC: src/foo
+	// POUL_DEST: foo/foo
+	// POUL_ARG_1: foo
 }
 
-func TestRunTemplate(t *testing.T) {
+func ExampleRunTemplate() {
 	code, err := prog.RunTemplate("echo")
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
-	fmt.Println(code)
+	if code != 0 {
+		panic("not null")
+	}
+	// Output:
+	// POUL_SRC: src/boo src/package
+	// POUL_DEST: foo/boo
+	// POUL_ARG_1: boo
 }
