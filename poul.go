@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 var (
@@ -52,6 +53,13 @@ func main() {
 			Name:   "watch",
 			Usage:  "watch a directory for changes on sources and recompile",
 			Action: watch,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:   "exclude",
+					Usage:  "exclude directories from being watched",
+					EnvVar: "POUL_EXCLUDE",
+				},
+			},
 		},
 	}
 
@@ -137,6 +145,7 @@ func run(c *cli.Context) {
 func watch(c *cli.Context) {
 	prog := readPoulfile(c)
 	dir := "./"
+	excludes := excludeMap(c.String("exclude"))
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -180,6 +189,10 @@ func watch(c *cli.Context) {
 		if !info.IsDir() {
 			return nil
 		}
+		// Skip excluded dirs
+		if _, ok := excludes[filepath.Clean(path)]; ok {
+			return filepath.SkipDir
+		}
 		stderr.Printf("Watching directory '%s'.\n", path)
 
 		return watcher.Add(path)
@@ -194,4 +207,16 @@ func isChangeOp(op fsnotify.Op) bool {
 	return op&fsnotify.Create == fsnotify.Create ||
 		op&fsnotify.Write == fsnotify.Write ||
 		op&fsnotify.Rename == fsnotify.Rename
+}
+
+func excludeMap(str string) map[string]bool {
+	arr := strings.Split(str, ",")
+	Map := make(map[string]bool)
+	for _, value := range arr {
+		if value == "" {
+			continue
+		}
+		Map[filepath.Clean(value)] = true
+	}
+	return Map
 }
