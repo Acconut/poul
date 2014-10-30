@@ -129,15 +129,13 @@ func (prog Program) Run(step Step, sources, dests []string, args map[int]string)
 	cmd := exec.Command("/bin/sh", "-e", "-c", step.Code)
 
 	// Setup environment variables
-	env := make([]string, len(args)+2)
-	env[0] = "POUL_SRC=" + strings.Join(sources, " ")
-	env[1] = "POUL_DEST=" + strings.Join(dests, " ")
+	env := os.Environ()
+	env = append(env, "POUL_SRC="+strings.Join(sources, " "))
+	env = append(env, "POUL_DEST="+strings.Join(dests, " "))
 
 	// Setup arguments
-	i := 2
 	for index, value := range args {
-		env[i] = "POUL_ARG_" + strconv.Itoa(index) + "=" + value
-		i++
+		env = append(env, "POUL_ARG_"+strconv.Itoa(index)+"="+value)
 	}
 
 	cmd.Env = env

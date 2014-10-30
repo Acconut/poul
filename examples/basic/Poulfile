@@ -13,3 +13,7 @@ src/$1.txt -> dest/$1.html {
 	echo "from ${POUL_ARG_1}" >> $POUL_DEST
 	echo "</h1>" >> $POUL_DEST
 }
+
+printenv -> /dev/null {
+	printenv
+}
