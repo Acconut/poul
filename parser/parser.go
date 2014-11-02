@@ -17,14 +17,8 @@ const (
 	BracketClose       = "}"
 )
 
-const (
-	PartNone = 1 << iota
-	PartTemplateStart
-	PartStepStart
-)
-
 var (
-	ReTemplateStart = regexp.MustCompile(`^([A-Za-z0-9_\-]+)\s*(\([^\)]+\))?\s*{$`)
+	ReTemplateStart = regexp.MustCompile(`^([A-Za-z0-9_\-]+)\s*(\([^\)]+\))?$`)
 )
 
 func Parse(code string) (*prog.Program, error) {
@@ -37,10 +31,10 @@ func Parse(code string) (*prog.Program, error) {
 		Templates: make(map[string]prog.Template),
 	}
 
-	part := PartNone
-	currentStep := prog.Step{}
-	currentTemplate := prog.Template{}
-	buffer := ""
+	inBlock := false
+	name := ""
+	body := ""
+	blockStart := 0
 
 	for lineNumber, line := range lines {
 		// Trim line
@@ -57,75 +51,46 @@ func Parse(code string) (*prog.Program, error) {
 			continue
 		}
 
-		// We expect a template or step start declaration
-		if part == PartNone {
-			if ReTemplateStart.Match([]byte(line)) {
-				// We found a template start
-				result := ReTemplateStart.FindStringSubmatch(line)
-
-				templateName := result[1]
-				hooks := result[2]
-
-				if hooks != "" {
-					// Hooks include brackets so we remove
-					// the first and last char
-					preHooks, postHooks := parseHooks(hooks[1 : len(hooks)-1])
-
-					currentTemplate.Prehooks = preHooks
-					currentTemplate.Posthooks = postHooks
-				}
-
-				currentTemplate.Name = templateName
-
-				part = PartTemplateStart
-				continue
-			} else if strings.Contains(line, Arrow) && line[len(line)-1] == BracketOpen {
-				// We found a step declaration
-				sources, dests := parseSources(line[0 : len(line)-1])
-
-				currentStep.Sources = sources
-				currentStep.Destinations = dests
-
-				part = PartStepStart
-				continue
-			} else {
+		if !inBlock {
+			// We currently aren't in a block and expect
+			// a block beginning (line ending with opening bracket).
+			if line[len(line)-1] != BracketOpen {
 				return nil, ParseError{
 					lineNumber + 1,
-					"Expected template or step declaration",
+					"Expected block declaration",
 				}
 			}
-		}
 
-		// We expect a body end or content
-		if part == PartTemplateStart || part == PartStepStart {
-			// Code ends
+			// Store trimed line without brackets as block name
+			name = strings.TrimSpace(line[:len(line)-1])
+
+			// Store line in which the block start
+			blockStart = lineNumber
+			inBlock = true
+			continue
+		} else {
+			// When the line is a closing brackets
+			// we have a block end
 			if line == BracketClose {
-				if part == PartStepStart {
-					currentStep.Code = buffer
-					part = PartNone
-
-					program.Steps = append(program.Steps, currentStep)
-					currentStep = prog.Step{}
-				} else if part == PartTemplateStart {
-					currentTemplate.Destinations = strings.Split(strings.TrimSpace(buffer), Newline)
-					part = PartNone
-
-					program.Templates[currentTemplate.Name] = currentTemplate
-					currentTemplate = prog.Template{}
+				err := parseBlock(&program, name, body, blockStart)
+				if err != nil {
+					return nil, err
 				}
 
-				// Clear buffer
-				buffer = ""
+				// Reset name, body and position
+				inBlock = false
+				name = ""
+				body = ""
 				continue
 			}
 
-			buffer += line + Newline
-			continue
+			// The current line is part of the body
+			body += line + Newline
 		}
 
 	}
 
-	if part != PartNone {
+	if inBlock {
 		return nil, io.EOF
 	}
 
@@ -155,4 +120,51 @@ func split(line, firstSep, secondSep string) ([]string, []string) {
 	}
 
 	return first, second
+}
+
+func parseBlock(program *prog.Program, name, body string, lineNr int) error {
+	if strings.Contains(name, Arrow) {
+		// We found a step declaration (a line containing the arrow ->)
+		sources, dests := parseSources(name)
+
+		step := prog.Step{
+			Sources:      sources,
+			Destinations: dests,
+			Code:         body,
+		}
+
+		program.Steps = append(program.Steps, step)
+
+		return nil
+	}
+
+	if ReTemplateStart.Match([]byte(name)) {
+		// We found a template start
+		result := ReTemplateStart.FindStringSubmatch(name)
+
+		template := prog.Template{
+			Name: result[1],
+		}
+		hooks := result[2]
+
+		if hooks != "" {
+			// Hooks include brackets so we remove
+			// the first and last char
+			preHooks, postHooks := parseHooks(hooks[1 : len(hooks)-1])
+
+			template.Prehooks = preHooks
+			template.Posthooks = postHooks
+		}
+
+		template.Destinations = strings.Split(strings.TrimSpace(body), Newline)
+
+		program.Templates[template.Name] = template
+
+		return nil
+	}
+
+	return ParseError{
+		lineNr + 1,
+		"Unknown block start",
+	}
 }
