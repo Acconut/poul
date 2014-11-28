@@ -5,31 +5,60 @@ import (
 )
 
 type Step struct {
-	Sources      []string
-	Destinations []string
+	Source       string
+	Destination  string
 	Code         string
+	Dependencies []string
+}
+
+type StepMatch struct {
+	Step        Step
+	Source      string
+	Destination string
+	Args        map[int]string
 }
 
 func (step Step) Builds(dest string) (map[int]string, bool, error) {
-	return globSlice(dest, step.Destinations)
+	return glob.SimpleMatch(step.Destination, dest)
 }
 
 func (step Step) Compiles(source string) (map[int]string, bool, error) {
-	return globSlice(source, step.Sources)
+	return glob.SimpleMatch(step.Source, source)
 }
 
-func globSlice(element string, slice []string) (map[int]string, bool, error) {
-	for _, item := range slice {
+func (step Step) DependsOn(dep string) (bool, error) {
+	for _, item := range step.Dependencies {
 		pattern, err := glob.NewPattern(item)
 		if err != nil {
-			return nil, false, err
+			return false, err
 		}
 
-		entry, matches := pattern.Match(element)
+		_, matches := pattern.Match(dep)
 		if matches {
-			return entry.Args, true, nil
+			return true, nil
 		}
 	}
 
-	return nil, false, nil
+	return false, nil
+}
+
+func (step Step) FindSources() ([]StepMatch, error) {
+	matches := make([]StepMatch, 0)
+	pattern, err := glob.NewPattern(step.Source)
+	if err != nil {
+		return matches, err
+	}
+	entries, err := pattern.Glob()
+	if err != nil {
+		return matches, err
+	}
+	for _, entry := range entries {
+		matches = append(matches, StepMatch{
+			Step:        step,
+			Source:      entry.Name,
+			Destination: glob.Replace(step.Destination, entry.Args),
+			Args:        entry.Args,
+		})
+	}
+	return matches, nil
 }

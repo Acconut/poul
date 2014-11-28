@@ -169,9 +169,20 @@ func watch(c *cli.Context) {
 				if err != nil {
 					if err == program.ErrNoMatch {
 						stderr.Printf("No build step found.")
-						continue
+					} else {
+						log.Fatal(err)
 					}
-					log.Fatal(err)
+				}
+				if code != 0 {
+					stderr.Printf("Step exited with code %d.\n", code)
+				}
+
+				code, err = prog.CompileByDependency(evt.Name)
+				if err != nil {
+					if err != program.ErrNoMatch {
+						// Ignore if none uses this dependency
+						log.Fatal(err)
+					}
 				}
 				if code != 0 {
 					stderr.Printf("Step exited with code %d.\n", code)

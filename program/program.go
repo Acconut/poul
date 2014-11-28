@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
-	"strings"
 	"syscall"
 
 	"github.com/Acconut/poul/glob"
@@ -68,10 +67,8 @@ func (prog Program) Build(dest string) (int, error) {
 		}
 
 		if matches {
-			sources := glob.ReplaceSlice(step.Sources, args)
-			return prog.Run(step, sources, []string{
-				dest,
-			}, args)
+			source := glob.Replace(step.Source, args)
+			return prog.Run(step, source, dest, args)
 		}
 	}
 
@@ -98,10 +95,8 @@ func (prog Program) Compile(source string) (int, error) {
 
 		if matches {
 			hadMatch = true
-			dests := glob.ReplaceSlice(step.Destinations, args)
-			code, err := prog.Run(step, []string{
-				source,
-			}, dests, args)
+			dest := glob.Replace(step.Destination, args)
+			code, err := prog.Run(step, source, dest, args)
 			if code != 0 || err != nil {
 				return code, err
 			}
@@ -115,6 +110,44 @@ func (prog Program) Compile(source string) (int, error) {
 	return -1, ErrNoMatch
 }
 
+func (prog Program) CompileByDependency(dep string) (int, error) {
+	hadMatch := false
+	for _, step := range prog.Steps {
+		depends, err := step.DependsOn(dep)
+		if err != nil {
+			return -1, err
+		}
+
+		if depends {
+			hadMatch = true
+			matches, err := step.FindSources()
+			if err != nil {
+				return -1, err
+			}
+			code, err := prog.runMatches(matches)
+			if code != 0 {
+				return code, err
+			}
+		}
+	}
+
+	if hadMatch {
+		return 0, nil
+	}
+
+	return -1, ErrNoMatch
+}
+
+func (prog Program) runMatches(matches []StepMatch) (int, error) {
+	for _, match := range matches {
+		code, err := prog.Run(match.Step, match.Source, match.Destination, match.Args)
+		if code != 0 {
+			return code, err
+		}
+	}
+	return 0, nil
+}
+
 func (prog Program) CompileMulti(sources []string) (int, error) {
 	for _, source := range sources {
 		code, err := prog.Compile(source)
@@ -125,13 +158,13 @@ func (prog Program) CompileMulti(sources []string) (int, error) {
 	return 0, nil
 }
 
-func (prog Program) Run(step Step, sources, dests []string, args map[int]string) (int, error) {
+func (prog Program) Run(step Step, source, dest string, args map[int]string) (int, error) {
 	cmd := exec.Command("/bin/sh", "-e", "-c", step.Code)
 
 	// Setup environment variables
 	env := os.Environ()
-	env = append(env, "POUL_SRC="+strings.Join(sources, " "))
-	env = append(env, "POUL_DEST="+strings.Join(dests, " "))
+	env = append(env, "POUL_SRC="+source)
+	env = append(env, "POUL_DEST="+dest)
 
 	// Setup arguments
 	for index, value := range args {

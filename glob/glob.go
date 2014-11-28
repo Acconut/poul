@@ -115,6 +115,19 @@ func (pattern Pattern) String() string {
 	return pattern.Pattern
 }
 
+func SimpleMatch(patternStr, str string) (map[int]string, bool, error) {
+	pattern, err := NewPattern(patternStr)
+	if err != nil {
+		return nil, false, err
+	}
+
+	entry, matches := pattern.Match(str)
+	if matches {
+		return entry.Args, true, nil
+	}
+	return nil, false, nil
+}
+
 func Replace(str string, args map[int]string) string {
 	for index, value := range args {
 		str = strings.Replace(str, "$"+strconv.Itoa(index), value, -1)

@@ -19,6 +19,7 @@ const (
 
 var (
 	ReTemplateStart = regexp.MustCompile(`^([A-Za-z0-9_\-]+)\s*(\([^\)]+\))?$`)
+	ReStepName      = regexp.MustCompile(`^([^\(]+)(\(([^\)]+)\))?\s*->\s(.+)$`)
 )
 
 func Parse(code string) (*prog.Program, error) {
@@ -101,23 +102,36 @@ func parseHooks(hooks string) ([]string, []string) {
 	return split(hooks, Slash, Comma)
 }
 
-func parseSources(line string) ([]string, []string) {
-	return split(line, Arrow, Comma)
+func parseSources(line string) (string, string, []string) {
+	result := ReStepName.FindStringSubmatch(line)
+
+	source := strings.TrimSpace(result[1])
+	deps := splitSingle(result[3], ",")
+	dest := strings.TrimSpace(result[4])
+
+	// Don't return an array containing an empty string
+	if len(deps) == 1 && deps[0] == "" {
+		deps = nil
+	}
+
+	return source, dest, deps
+}
+
+func splitSingle(line, sep string) []string {
+	parts := strings.Split(line, sep)
+
+	for index, part := range parts {
+		parts[index] = strings.TrimSpace(part)
+	}
+
+	return parts
 }
 
 func split(line, firstSep, secondSep string) ([]string, []string) {
 	parts := strings.Split(line, firstSep)
 
-	first := strings.Split(parts[0], secondSep)
-	second := strings.Split(parts[1], secondSep)
-
-	for index, part := range first {
-		first[index] = strings.TrimSpace(part)
-	}
-
-	for index, part := range second {
-		second[index] = strings.TrimSpace(part)
-	}
+	first := splitSingle(parts[0], secondSep)
+	second := splitSingle(parts[1], secondSep)
 
 	return first, second
 }
@@ -125,12 +139,13 @@ func split(line, firstSep, secondSep string) ([]string, []string) {
 func parseBlock(program *prog.Program, name, body string, lineNr int) error {
 	if strings.Contains(name, Arrow) {
 		// We found a step declaration (a line containing the arrow ->)
-		sources, dests := parseSources(name)
+		source, dest, deps := parseSources(name)
 
 		step := prog.Step{
-			Sources:      sources,
-			Destinations: dests,
+			Source:       source,
+			Destination:  dest,
 			Code:         body,
+			Dependencies: deps,
 		}
 
 		program.Steps = append(program.Steps, step)

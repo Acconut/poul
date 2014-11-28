@@ -18,10 +18,10 @@ src/includes/* -> ./ {
 	cp $POUL_SOURCE $POUL_DEST
 }
 
-src/*.less, src/includes/*.less -> dist/style.css {
+src/*.less (src/includes/*.less) -> dist/style.css {
 	less src/main.less > dist/style.css
 }
 
-src/*.js, package.json -> dist/script.js {
+src/*.js (package.json) -> dist/script.js {
 	browserify src/main.js > dist/script.js
 }

@@ -25,7 +25,7 @@ dist/foo.html
 bar/lol.hi
 }
 
-  foo/*/$1/lol, here.file -> ../hi/ouz, three { 
+  foo/*/$1/lol (  here.file, lol/hoo) -> ../hi/ouz { 
 	echo hello
 }
 
@@ -65,24 +65,18 @@ func TestParser(t *testing.T) {
 		},
 		Steps: []p.Step{
 			p.Step{
-				Sources: []string{
-					"foo/bar",
-				},
-				Destinations: []string{
-					"dep/out",
-				},
+				Source:      "foo/bar",
+				Destination: "dep/out",
 				Code: `command1
 command2
 `,
 			},
 			p.Step{
-				Sources: []string{
-					"foo/*/$1/lol",
+				Source:      "foo/*/$1/lol",
+				Destination: "../hi/ouz",
+				Dependencies: []string{
 					"here.file",
-				},
-				Destinations: []string{
-					"../hi/ouz",
-					"three",
+					"lol/hoo",
 				},
 				Code: `echo hello
 `,

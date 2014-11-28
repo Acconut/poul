@@ -5,19 +5,17 @@ var prog = Program{
 		"echo": Template{
 			Name: "echo",
 			Destinations: []string{
-				"foo/boo",
+				"test/out/boo",
 			},
 		},
 	},
 	Steps: []Step{
 		Step{
-			Sources: []string{
-				"src/$1",
-				"src/package",
+			Source: "test/$1.txt",
+			Dependencies: []string{
+				"test/package",
 			},
-			Destinations: []string{
-				"foo/$1",
-			},
+			Destination: "test/out/$1",
 			Code: `
 echo "POUL_SRC: ${POUL_SRC}"
 echo "POUL_DEST: ${POUL_DEST}"
@@ -27,7 +25,7 @@ echo "POUL_ARG_1: ${POUL_ARG_1}"`,
 }
 
 func ExampleProgram_Build() {
-	code, err := prog.Build("foo/bar")
+	code, err := prog.Build("test/out/bar")
 	if err != nil {
 		panic(err)
 	}
@@ -35,13 +33,13 @@ func ExampleProgram_Build() {
 		panic("not null")
 	}
 	// Output:
-	// POUL_SRC: src/bar src/package
-	// POUL_DEST: foo/bar
+	// POUL_SRC: test/bar.txt
+	// POUL_DEST: test/out/bar
 	// POUL_ARG_1: bar
 }
 
 func ExampleProgram_Compile() {
-	code, err := prog.Compile("src/lol")
+	code, err := prog.Compile("test/foo.txt")
 	if err != nil {
 		panic(err)
 	}
@@ -49,15 +47,15 @@ func ExampleProgram_Compile() {
 		panic("not null")
 	}
 	// Output:
-	// POUL_SRC: src/lol
-	// POUL_DEST: foo/lol
-	// POUL_ARG_1: lol
+	// POUL_SRC: test/foo.txt
+	// POUL_DEST: test/out/foo
+	// POUL_ARG_1: foo
 }
 
 func ExampleProgram_CompileMulti() {
 	code, err := prog.CompileMulti([]string{
-		"src/lol",
-		"src/foo",
+		"test/foo.txt",
+		"test/bar.txt",
 	})
 	if err != nil {
 		panic(err)
@@ -66,12 +64,12 @@ func ExampleProgram_CompileMulti() {
 		panic("not null")
 	}
 	// Output:
-	// POUL_SRC: src/lol
-	// POUL_DEST: foo/lol
-	// POUL_ARG_1: lol
-	// POUL_SRC: src/foo
-	// POUL_DEST: foo/foo
+	// POUL_SRC: test/foo.txt
+	// POUL_DEST: test/out/foo
 	// POUL_ARG_1: foo
+	// POUL_SRC: test/bar.txt
+	// POUL_DEST: test/out/bar
+	// POUL_ARG_1: bar
 }
 
 func ExampleProgram_RunTemplate() {
@@ -82,8 +80,26 @@ func ExampleProgram_RunTemplate() {
 	if code != 0 {
 		panic("not null")
 	}
-	// Output:
-	// POUL_SRC: src/boo src/package
-	// POUL_DEST: foo/boo
+	// Output
+	// POUL_SRC: test/boo.txt
+	// POUL_DEST: test/out/boo
 	// POUL_ARG_1: boo
+}
+
+func ExampleProgram_CompileByDependency() {
+	code, err := prog.CompileByDependency("test/package")
+	if err != nil {
+		panic(err)
+	}
+	if code != 0 {
+		panic("not null")
+	}
+	// Output
+	// POUL_SRC: test/bar.txt
+	// POUL_DEST: test/out/bar
+	// POUL_ARG_1: bar
+	// POUL_SRC: test/foo.txt
+	// POUL_DEST: test/out/foo
+	// POUL_ARG_1: foo
+
 }
