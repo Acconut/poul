@@ -145,6 +145,9 @@ func run(c *cli.Context) {
 func watch(c *cli.Context) {
 	prog := readPoulfile(c)
 	dir := "./"
+	if len(c.Args()) > 0 {
+		dir = c.Args()[0]
+	}
 	excludes := excludeMap(c.String("exclude"))
 
 	watcher, err := fsnotify.NewWatcher()
