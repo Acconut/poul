@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	stderr = log.New(os.Stderr, "", 0)
+	stderr = log.New(os.Stderr, "--> ", 0)
 )
 
 func init() {
@@ -161,13 +161,14 @@ func watch(c *cli.Context) {
 		for {
 			select {
 			case evt := <-watcher.Events:
+				stderr.Println("")
 				prefix := fmt.Sprintf("Event: %s... ", evt)
 				if !isChangeOp(evt.Op) {
 					stderr.Println(prefix + "ignoring.")
 					continue
 				}
 
-				stderr.Println(prefix + "recompiling.")
+				stderr.Println(prefix + "recompiling...")
 				code, err := prog.Compile(evt.Name)
 				if err != nil {
 					if err == program.ErrNoMatch {
@@ -176,19 +177,21 @@ func watch(c *cli.Context) {
 						log.Fatal(err)
 					}
 				}
-				if code != 0 {
-					stderr.Printf("Step exited with code %d.\n", code)
+				if err != program.ErrNoMatch {
+					stderr.Printf("(%d)\n", code)
 				}
 
+				stderr.Println("Recompiling sources by dependency...")
 				code, err = prog.CompileByDependency(evt.Name)
 				if err != nil {
-					if err != program.ErrNoMatch {
-						// Ignore if none uses this dependency
+					if err == program.ErrNoMatch {
+						stderr.Println("Not as dependency used.")
+					} else {
 						log.Fatal(err)
 					}
 				}
-				if code != 0 {
-					stderr.Printf("Step exited with code %d.\n", code)
+				if err != program.ErrNoMatch {
+					stderr.Printf("(%d)\n", code)
 				}
 			case err := <-watcher.Errors:
 				log.Fatal(err)
