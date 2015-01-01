@@ -2,16 +2,17 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/Acconut/poul/parser"
-	"github.com/Acconut/poul/program"
-	"github.com/codegangsta/cli"
-	"gopkg.in/fsnotify.v1"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/Acconut/poul/parser"
+	"github.com/Acconut/poul/program"
+	"github.com/codegangsta/cli"
+	"gopkg.in/fsnotify.v1"
 )
 
 var (
