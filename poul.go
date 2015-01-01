@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/Acconut/poul/parser"
 	"github.com/Acconut/poul/program"
 	"github.com/codegangsta/cli"
@@ -12,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 var (
@@ -156,45 +156,28 @@ func watch(c *cli.Context) {
 	}
 	defer watcher.Close()
 
+	recentChanges := make(map[string]time.Time)
+
 	done := make(chan bool)
 	go func() {
 		for {
 			select {
 			case evt := <-watcher.Events:
-				stderr.Println("")
-				prefix := fmt.Sprintf("Event: %s... ", evt)
 				if !isChangeOp(evt.Op) {
-					stderr.Println(prefix + "ignoring.")
 					continue
 				}
-
-				stderr.Println(prefix + "recompiling...")
-				code, err := prog.Compile(evt.Name)
-				if err != nil {
-					if err == program.ErrNoMatch {
-						stderr.Printf("No build step found.")
-					} else {
-						log.Fatal(err)
-					}
-				}
-				if err != program.ErrNoMatch {
-					stderr.Printf("(%d)\n", code)
-				}
-
-				stderr.Println("Recompiling sources by dependency...")
-				code, err = prog.CompileByDependency(evt.Name)
-				if err != nil {
-					if err == program.ErrNoMatch {
-						stderr.Println("Not as dependency used.")
-					} else {
-						log.Fatal(err)
-					}
-				}
-				if err != program.ErrNoMatch {
-					stderr.Printf("(%d)\n", code)
-				}
+				recentChanges[evt.Name] = time.Now()
 			case err := <-watcher.Errors:
 				log.Fatal(err)
+			case <-time.Tick(1 * time.Second):
+				now := time.Now()
+				for name, lastEvent := range recentChanges {
+					diff := now.Sub(lastEvent)
+					if diff > (time.Millisecond * 500) {
+						delete(recentChanges, name)
+						go processFile(prog, name)
+					}
+				}
 			}
 		}
 	}()
@@ -236,4 +219,28 @@ func excludeMap(str string) map[string]bool {
 		Map[filepath.Clean(value)] = true
 	}
 	return Map
+}
+
+func processFile(prog *program.Program, fileName string) {
+	stderr.Println("")
+	stderr.Printf("Event(%s): recompiling...", fileName)
+	code, err := prog.Compile(fileName)
+	processCompilation(code, err, "No build step found.")
+
+	stderr.Println("Recompiling sources by dependency...")
+	code, err = prog.CompileByDependency(fileName)
+	processCompilation(code, err, "Not as dependency used.")
+}
+
+func processCompilation(code int, err error, message string) {
+	if err != nil {
+		if err == program.ErrNoMatch {
+			stderr.Println(message)
+		} else {
+			log.Fatal(err)
+		}
+	}
+	if err != program.ErrNoMatch {
+		stderr.Printf("(%d)\n", code)
+	}
 }
